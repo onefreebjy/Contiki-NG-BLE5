@@ -52,6 +52,11 @@
 #include "sys/log.h"
 #define LOG_MODULE "L2CAP"
 #define LOG_LEVEL LOG_LEVEL_MAC
+
+#include <stdio.h>
+#define PRINTF(...) printf(__VA_ARGS__)
+#define PRINTADDR(addr) PRINTF("%02X:%02X:%02X:%02X:%02X:%02X", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5])
+#define PRINTIPADDR(addr) PRINTF("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7])
 /*---------------------------------------------------------------------------*/
 #define MS_TO_CLOCK_SECONDS(X)    ((int)(((double)((X)*CLOCK_SECOND)) / 1000.0))
 /*---------------------------------------------------------------------------*/
@@ -114,6 +119,8 @@ get_channel_for_cid(uint16_t own_cid)
 }
 /*---------------------------------------------------------------------------*/
 PROCESS(ble_l2cap_tx_process, "BLE L2CAP TX process");
+/*---------------------------------------------------------------------------*/
+#if !UIP_CONF_ROUTER
 /*---------------------------------------------------------------------------*/
 static uint8_t
 init_adv_data(char *adv_data)
@@ -228,6 +235,42 @@ input_l2cap_conn_req(uint8_t *data)
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &channel->peer_addr);
   NETSTACK_RADIO.send(packetbuf_hdrptr(), packetbuf_totlen());
 }
+#else
+/*---------------------------------------------------------------------------*/
+void
+input_l2cap_conn_resp(uint8_t *data)
+{
+    uint16_t len;
+    uint16_t result;
+    l2cap_channel_t *channel = get_channel_for_addr(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+    
+    if(channel == NULL) {
+        LOG_DBG("input_l2cap_conn_resp: channel not found\n");
+        return;
+    }
+    
+    /*  identifier = data[0]; */
+    memcpy(&len, &data[1], 2);
+    
+    if(len != 10) {
+        LOG_DBG("l2cap_conn_resp: invalid len: %d\n", len);
+        return;
+    }
+    
+    /* parse L2CAP connection data */
+    memcpy(&channel->channel_peer.cid, &data[3], 2);
+    memcpy(&channel->channel_peer.mtu, &data[5], 2);
+    memcpy(&channel->channel_peer.mps, &data[7], 2);
+    memcpy(&channel->channel_peer.credits, &data[9], 2);
+    memcpy(&result, &data[11], 2);
+    
+    if(result != 0x00) {
+        LOG_DBG("l2cap_conn_resp: unsuccessful (result: 0x%04X)\n", result);
+    } else {
+        LOG_DBG("l2cap_conn_resp: connection established\n");
+    }
+}
+#endif
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
@@ -247,6 +290,26 @@ init(void)
   NETSTACK_RADIO.init();
   NETSTACK_RADIO.get_object(RADIO_CONST_BLE_BD_ADDR, &ble_addr, BLE_ADDR_SIZE);
 
+  /*	Show device BLE address 	*/
+  PRINTF("ble-mac: BLE-addr: ");
+  PRINTADDR(ble_addr);
+  PRINTF("\n");
+
+#if UIP_CONF_ROUTER
+    int conn_interval;
+    
+    /* convert to the BLE controller units (in 1.25 ms) */
+    conn_interval = (int)(((double)(CONNECTION_INTERVAL_MS)) / 1.25);
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_CONN_INTERVAL, conn_interval);
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_CONN_LATENCY, CONNECTION_SLAVE_LATENCY);
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_CONN_SUPERVISION_TIMEOUT, CONNECTION_TIMEOUT);
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_SCAN_OWN_ADDR_TYPE, BLE_ADDR_TYPE_PUBLIC);
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_PEER_ADDR_TYPE, BLE_ADDR_TYPE_PUBLIC);
+    
+    /* enable connection initiation */
+    NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_INITIATOR_ENABLE, 1);
+    
+#else
   uint8_t adv_data_len, scan_resp_data_len;
   char adv_data[BLE_ADV_DATA_LEN];
   char scan_resp_data[BLE_SCAN_RESP_DATA_LEN];
@@ -265,9 +328,46 @@ init(void)
 
   /* enable advertisement */
   NETSTACK_RADIO.set_value(RADIO_PARAM_BLE_ADV_ENABLE, 1);
-
+#endif
   NETSTACK_MAC.on();
 }
+/*---------------------------------------------------------------------------*/
+#if UIP_CONF_ROUTER
+static void
+send_l2cap_conn_req(l2cap_channel_t *channel)
+{
+    uint8_t data[18];
+    uint16_t le_psm = L2CAP_IPSP_PSM;
+    LOG_DBG("send_l2cap_conn_req\n");
+    /* length */
+    data[0] = 0x0E;
+    data[1] = 0x00;
+    /* channel ID */
+    data[2] = 0x05;
+    data[3] = 0x00;
+    /* code */
+    data[4] = L2CAP_CODE_CONN_REQ;
+    /* identifier (hardcoded to 0x01) */
+    data[5] = 0x01;
+    /* command length */
+    data[6] = 0x0A;
+    data[7] = 0x00;
+    
+    memcpy(&data[8], &le_psm, 2);
+    memcpy(&data[10], &channel->channel_own.cid, 2);
+    memcpy(&data[12], &channel->channel_own.mtu, 2);
+    memcpy(&data[14], &channel->channel_own.mps, 2);
+    memcpy(&data[16], &channel->channel_own.credits, 2);
+    
+    LOG_DBG("send_l2cap_conn_req: CID: %2d, MTU: %3d, MPS: %3d, credits: %2d\n",
+           channel->channel_own.cid, channel->channel_own.mtu, channel->channel_own.mps, channel->channel_own.credits);
+    
+    packetbuf_copyfrom((void *)data, 18);
+    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &channel->peer_addr);
+    NETSTACK_RADIO.send(packetbuf_hdrptr(), packetbuf_totlen());
+}
+#endif
 /*---------------------------------------------------------------------------*/
 static uint16_t
 check_own_l2cap_credits(l2cap_channel_t *channel)
@@ -398,9 +498,17 @@ input_l2cap_frame_signal_channel(uint8_t *data, uint8_t data_len)
 {
   if(data[4] == L2CAP_CODE_CREDIT) {
     input_l2cap_credit(&data[5]);
-  } else if(data[4] == L2CAP_CODE_CONN_REQ) {
+  }
+#if UIP_CONF_ROUTER
+  else if(data[4] == L2CAP_CODE_CONN_RSP) {
+      input_l2cap_conn_resp(&data[5]);
+  }
+#else
+  else if(data[4] == L2CAP_CODE_CONN_REQ) {
     input_l2cap_conn_req(&data[5]);
-  } else if(data[4] == L2CAP_CODE_CONN_UPDATE_RSP) {
+  }
+#endif
+  else if(data[4] == L2CAP_CODE_CONN_UPDATE_RSP) {
     input_l2cap_connection_udate_resp(&data[5]);
   } else {
     LOG_WARN("l2cap_frame_signal_channel: unknown signal channel code: %d\n", data[4]);
@@ -460,6 +568,18 @@ input(void)
   l2cap_channel_t *channel;
   uint16_t credits;
 
+#if UIP_CONF_ROUTER
+    if((frame_type == FRAME_BLE_CONNECTION_EVENT)) {
+        channel = &l2cap_channels[l2cap_channel_count];
+        linkaddr_copy(&channel->peer_addr, packetbuf_addr(PACKETBUF_ADDR_SENDER));
+        LOG_DBG("ble-mac: input: sending L2CAP conn_req: cid: %2d, addr: ", channel->channel_own.cid);
+        //PRINTIPADDR(&channel->peer_addr);
+        LOG_DBG("\n");
+        send_l2cap_conn_req(channel);
+        l2cap_channel_count++;
+    }
+#endif
+    
   if(frame_type == FRAME_BLE_RX_EVENT) {
     memcpy(&channel_id, &data[2], 2);
     channel = get_channel_for_cid(channel_id);
