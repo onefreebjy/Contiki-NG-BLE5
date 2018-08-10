@@ -108,6 +108,26 @@ void rf_ble_cmd_create_adv_params(uint8_t *param, dataQueue_t *rx_queue,
 
 /*---------------------------------------------------------------------------*/
 /**
+ * \brief Creates a BLE radio command structure that sets up
+ *      BLE initiation event when sent to the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
+                                     uint8_t *output, uint32_t start_time);
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Creates BLE radio command parameters that are used to set up
+ *      BLE initiation event on the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
+                                        uint32_t initiator_window,
+                                        ble_addr_type_t own_addr_type, uint8_t *own_addr,
+                                        ble_addr_type_t peer_addr_type, uint8_t *peer_addr,
+                                        uint32_t connect_time,
+                                        uint8_t *conn_req_data);
+/*---------------------------------------------------------------------------*/
+/**
  * \brief Creates a BLE radio command structure that sets up a single
  *      BLE connection event when sent to the radio core
  * \param cmd     A pointer to command that is created
@@ -150,6 +170,24 @@ void rf_ble_cmd_create_slave_params(uint8_t *param, dataQueue_t *rx_queue,
 
 /*---------------------------------------------------------------------------*/
 /**
+ * \brief Creates a BLE radio command structure that sets up
+ *      BLE connection event when sent to the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
+                                  uint8_t *output, uint32_t start_time);
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Creates BLE radio command parameters that are used to set up
+ *      BLE connection event on the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
+                                     dataQueue_t *tx_queue, uint32_t access_address,
+                                     uint8_t crc_init_0, uint8_t crc_init_1,
+                                     uint8_t crc_init_2, uint8_t first_packet);
+/*---------------------------------------------------------------------------*/
+/**
  * \brief Adds a data buffer to a BLE transmission queue
  * \param q	    A pointer to BLE transmission queue where the buffer
  *        should be added
@@ -157,43 +195,4 @@ void rf_ble_cmd_create_slave_params(uint8_t *param, dataQueue_t *rx_queue,
  */
 unsigned short rf_ble_cmd_add_data_queue_entry(dataQueue_t *q, uint8_t *e);
 /*---------------------------------------------------------------------------*/
-void rf_ble_cmd_create_adv_ext_cmd(uint8_t *command, rfc_CMD_BLE5_ADV_AUX_t *next_aux_cmd,
-	uint8_t channel, uint8_t *param, uint8_t *output);
-
-void rf_ble_cmd_create_adv_ext_params(uint8_t *param, uint8_t *adv_data,
-	ble_addr_type_t own_addr_type, uint8_t *own_addr, uint32_t aux_target_time);
-
-void rf_ble_cmd_create_adv_aux_cmd(uint8_t *command, rfc_CMD_BLE5_ADV_AUX_t *next_aux_cmd,
-	uint8_t channel, uint8_t *param, uint8_t *output);
-
-void rf_ble_cmd_create_adv_aux_params(uint8_t *param, dataQueue_t *rx_queue,
-	uint8_t *adv_data, uint8_t *scan_resp_data, ble_addr_type_t own_addr_type,
-	uint8_t *own_addr, uint32_t aux_target_time);
-
-void rf_ble_cmd_create_scan_cmd(uint8_t *command, uint8_t channel,
-	uint8_t *param, uint8_t *output);
-
-void rf_ble_cmd_create_scan_params(uint8_t *param, dataQueue_t *rx_queue,
-	ble_scan_type_t scan_type, uint32_t scan_window,
-	ble_addr_type_t own_addr_type, uint8_t *own_addr,
-	ble_scan_filter_policy_t filter_policy,
-	uint8_t first_packet);
-
-void rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-	uint8_t *output, uint32_t start_time);
-
-void rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
-	uint32_t initiator_window,
-	ble_addr_type_t own_addr_type, uint8_t *own_addr,
-	ble_addr_type_t peer_addr_type, uint8_t *peer_addr,
-	uint32_t connect_time,
-	uint8_t *conn_req_data);
-void rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-	uint8_t *output, uint32_t start_time);
-
-void rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
-	dataQueue_t *tx_queue, uint32_t access_address,
-	uint8_t crc_init_0, uint8_t crc_init_1,
-	uint8_t crc_init_2, uint8_t first_packet);
-
 #endif /* RF_BLE_CMD_H_ */

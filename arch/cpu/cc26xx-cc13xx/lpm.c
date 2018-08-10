@@ -193,8 +193,11 @@ wake_up(void)
 
   /* Adjust recharge settings */
   // May need to change to XOSC_IN_LOW_POWER_MODE
-  ti_lib_sys_ctrl_adjust_recharge_after_power_down(XOSC_IN_HIGH_POWER_MODE);
-
+#if defined(ThisLibraryIsFor_CC26x0R2_HaltIfViolated)
+    ti_lib_sys_ctrl_adjust_recharge_after_power_down(XOSC_IN_HIGH_POWER_MODE);
+#else
+    ti_lib_sys_ctrl_adjust_recharge_after_power_down();
+#endif
   /*
    * Release the request to the uLDO
    * This is likely not required, since the switch to GLDO/DCDC is automatic

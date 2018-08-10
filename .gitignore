@@ -255,3 +255,6 @@ examples/platform-specific/cc2640r2/very-sleepy-demo/Makefile
 examples/platform-specific/cc2640r2/very-sleepy-demo/project-conf.h
 examples/platform-specific/cc2640r2/very-sleepy-demo/README.md
 examples/platform-specific/cc2640r2/very-sleepy-demo/very-sleepy-demo.c
+.vs/contiki-ng/v15/ipch/AutoPCH/9810b5d120fa784d/PWR_CTRL.ipch
+.vs/contiki-ng/v15/ipch/AutoPCH/b4cd2a270435e9a5/PWR_CTRL.ipch
+CHANGES.txt

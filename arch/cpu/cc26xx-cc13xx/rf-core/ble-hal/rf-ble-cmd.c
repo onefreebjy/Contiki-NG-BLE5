@@ -132,7 +132,6 @@ rf_ble_cmd_send(uint8_t *command)
 {
   uint32_t cmdsta;
   rfc_radioOp_t *cmd = (rfc_radioOp_t *)command;
-  //printf("DBF: received ble cmd:0x%04X\n", (((rfc_radioOp_t *)cmd)->commandNo));
   if(rf_core_send_cmd((uint32_t)cmd, &cmdsta) != RF_CORE_CMD_OK) {
       LOG_ERR("rf_ble_cmd_send() could not send. cmd:0x%04X status: 0x%04X\n",
             cmd->commandNo,
@@ -192,15 +191,26 @@ rf_ble_cmd_setup_ble_mode(void)
 }
 /*---------------------------------------------------------------------------*/
 /* ADVERTISING functions                                                     */
+/*---------------------------------------------------------------------------*/
 void
 rf_ble_cmd_create_adv_cmd(uint8_t *command, uint8_t channel,
                           uint8_t *param, uint8_t *output)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_ADV_t *c = (rfc_CMD_BLE5_ADV_t *)command;
+
+  memset(c, 0x00, sizeof(rfc_CMD_BLE5_ADV_t));
+
+  c->commandNo = CMD_BLE5_ADV;
+  c->rangeDelay = 0;
+  c->txPower = tx_power;
+#else
   rfc_CMD_BLE_ADV_t *c = (rfc_CMD_BLE_ADV_t *)command;
 
   memset(c, 0x00, sizeof(rfc_CMD_BLE_ADV_t));
   
   c->commandNo = CMD_BLE_ADV;
+#endif
   c->condition.rule = COND_NEVER;
   c->whitening.bOverride = 0;
   c->channel = channel;
@@ -239,192 +249,6 @@ rf_ble_cmd_create_adv_params(uint8_t *param, dataQueue_t *rx_queue,
   p->endTrigger.triggerType = TRIG_NEVER;
 }
 /*---------------------------------------------------------------------------*/
-/*	Bluetooth 5 New Advertiser Commands	*/
-void
-rf_ble_cmd_create_adv_ext_cmd(uint8_t *command, rfc_CMD_BLE5_ADV_AUX_t *next_aux_cmd, 
-	uint8_t channel, uint8_t *param, uint8_t *output)
-{
-	rfc_CMD_BLE5_ADV_EXT_t *c = (rfc_CMD_BLE5_ADV_EXT_t *)command;
-
-	memset(c, 0x00, sizeof(rfc_CMD_BLE5_ADV_EXT_t));
-
-	c->commandNo = CMD_BLE5_ADV_EXT;
-	//c->pNextOp = (rfc_radioOp_t *)next_aux_cmd;
-	c->condition.rule = COND_NEVER;
-	c->whitening.bOverride = 0;
-	c->channel = channel;
-	c->pParams = (rfc_ble5AdvExtPar_t *)param;
-	c->startTrigger.triggerType = TRIG_NOW;
-	c->pOutput = (rfc_bleAdvOutput_t *)output;
-    
-    c->txPower = tx_power;
-    c->rangeDelay = 0;
-}
-/*---------------------------------------------------------------------------*/
-void
-rf_ble_cmd_create_adv_ext_params(uint8_t *param, uint8_t *adv_data,
-	ble_addr_type_t own_addr_type, uint8_t *own_addr, uint32_t aux_target_time)
-{
-	rfc_ble5AdvExtPar_t *p = (rfc_ble5AdvExtPar_t *)param;
-
-	memset(p, 0x00, sizeof(rfc_ble5AdvExtPar_t));
-
-	p->advConfig.deviceAddrType = own_addr_type;
-	p->auxPtrTargetType = TRIG_ABSTIME;
-	p->auxPtrTargetTime = aux_target_time;
-	p->pAdvPkt = adv_data;
-	p->pDeviceAddress = (uint16_t *)own_addr;
-}
-/*---------------------------------------------------------------------------*/
-void
-rf_ble_cmd_create_adv_aux_cmd(uint8_t *command, rfc_CMD_BLE5_ADV_AUX_t *next_aux_cmd, 
-	uint8_t channel, uint8_t *param, uint8_t *output)
-{
-    rfc_CMD_BLE5_ADV_AUX_t *c = (rfc_CMD_BLE5_ADV_AUX_t *)command;
-
-    memset(c, 0x00, sizeof(rfc_CMD_BLE5_ADV_AUX_t));
-
-    c->commandNo = CMD_BLE5_ADV_AUX;
-	//c->pNextOp = (rfc_radioOp_t *)next_aux_cmd;
-    c->pNextOp = NULL;
-    c->condition.rule = COND_NEVER;
-    c->whitening.bOverride = 0;
-    c->channel = channel;
-    c->pParams = (rfc_ble5AdvAuxPar_t *)param;
-    c->startTrigger.triggerType = TRIG_NOW;
-    c->pOutput = (rfc_bleAdvOutput_t *)output;
-    
-    c->txPower = tx_power;
-    c->rangeDelay = 0;
-}
-/*---------------------------------------------------------------------------*/
-void
-rf_ble_cmd_create_adv_aux_params(uint8_t *param, dataQueue_t *rx_queue, 
-	uint8_t *adv_data, uint8_t *scan_resp_data, ble_addr_type_t own_addr_type, 
-	uint8_t *own_addr, uint32_t aux_target_time)
-{
-    rfc_ble5AdvAuxPar_t *p = (rfc_ble5AdvAuxPar_t *)param;
-
-    memset(p, 0x00, sizeof(rfc_ble5AdvAuxPar_t));
-
-    p->pRxQ = rx_queue;
-    p->rxConfig.bAutoFlushIgnored = 1;
-    p->rxConfig.bAutoFlushCrcErr = 0;
-    p->rxConfig.bAutoFlushEmpty = 1;
-    p->rxConfig.bIncludeLenByte = 1;
-    p->rxConfig.bIncludeCrc = 0;
-    p->rxConfig.bAppendRssi = 1;
-    p->rxConfig.bAppendStatus = 1;
-    p->rxConfig.bAppendTimestamp = 1;
-    p->advConfig.advFilterPolicy = 0;
-    p->advConfig.bStrictLenFilter = 0;
-    //p->advConfig.bDirected = 0;
-    p->advConfig.privIgnMode = 0;
-    p->advConfig.rpaMode = 0;
-    p->advConfig.deviceAddrType = own_addr_type;
-	//p->auxPtrTargetType = TRIG_ABSTIME;
-	//p->auxPtrTargetTime = aux_target_time;
-    p->pDeviceAddress = (uint16_t *)own_addr;
-    p->pAdvPkt = adv_data;
-    p->pRspPkt = scan_resp_data;
-}
-/*---------------------------------------------------------------------------*/
-/* SCANNING functions                                                        */
-/*---------------------------------------------------------------------------*/
-void
-rf_ble_cmd_create_scan_cmd(uint8_t *command, uint8_t channel,
-                           uint8_t *param, uint8_t *output)
-{
-    /*    Bluetooth 5 Scanner Commands    */
-#if RADIO_CONF_BLE5
-    rfc_CMD_BLE5_SCANNER_t *c = (rfc_CMD_BLE5_SCANNER_t *)command;
-    
-    memset(c, 0x00, sizeof(rfc_CMD_BLE5_SCANNER_t));
-    c->commandNo = CMD_BLE5_SCANNER;
-    c->condition.rule = COND_NEVER;
-    c->whitening.bOverride = 0;
-    c->channel = channel;
-    c->pParams = (rfc_ble5ScannerPar_t *)param;
-    c->startTrigger.triggerType = TRIG_NOW;
-    c->pOutput = (rfc_ble5ScanInitOutput_t *)output;
-
-	//c->phyMode.mainMode = 1;
-	c->txPower = tx_power;
-	c->rangeDelay = 0;
-#else
-    rfc_CMD_BLE_SCANNER_t *c = (rfc_CMD_BLE_SCANNER_t *)command;
-    
-    memset(c, 0x00, sizeof(rfc_CMD_BLE_SCANNER_t));
-    c->commandNo = CMD_BLE_SCANNER;
-    c->condition.rule = COND_NEVER;
-    c->whitening.bOverride = 0;
-    c->channel = channel;
-    c->pParams = (rfc_bleScannerPar_t *)param;
-    c->startTrigger.triggerType = TRIG_NOW;
-    c->pOutput = (rfc_bleScannerOutput_t *)output;
-#endif
-}
-    
-    
-/*---------------------------------------------------------------------------*/
-void
-rf_ble_cmd_create_scan_params(uint8_t *param, dataQueue_t *rx_queue,
-                              ble_scan_type_t scan_type, uint32_t scan_window,
-                              ble_addr_type_t own_addr_type, uint8_t *own_addr,
-                              ble_scan_filter_policy_t filter_policy,
-                              uint8_t first_packet)
-{
-    /*    Bluetooth 5 Scanner Commands    */
-#if RADIO_CONF_BLE5
-    rfc_ble5ScannerPar_t *p = (rfc_ble5ScannerPar_t *)param;
-#else
-    rfc_bleScannerPar_t *p = (rfc_bleScannerPar_t *)param;
-#endif
-    if (first_packet) {
-        /*
-         * only reset the memory for the first packet when in scanning mode.
-         * values for backoff procedure are incremented by the RFcore.
-         */
-        memset(p, 0x00, sizeof(rfc_bleScannerPar_t));
-        p->randomState = 0;
-        p->backoffCount = 1;
-        p->backoffPar.logUpperLimit = 0;
-        p->backoffPar.bLastSucceeded = 0;
-        p->backoffPar.bLastFailed = 0;
-    }
-    p->pRxQ = rx_queue;
-    p->rxConfig.bAutoFlushIgnored = 1;
-    p->rxConfig.bAutoFlushCrcErr = 0;
-    p->rxConfig.bAutoFlushEmpty = 1;
-    p->rxConfig.bIncludeLenByte = 1;
-    p->rxConfig.bIncludeCrc = 0;
-    p->rxConfig.bAppendRssi = 1;
-    p->rxConfig.bAppendStatus = 1;
-    p->rxConfig.bAppendTimestamp = 1;
-    p->scanConfig.scanFilterPolicy = 0;
-    p->scanConfig.bActiveScan = scan_type;
-    p->scanConfig.deviceAddrType = own_addr_type;
-    p->scanConfig.bStrictLenFilter = 1;
-    
-    if (filter_policy == BLE_SCAN_FILTER_POLICY_ACCEPT) {
-        p->scanConfig.bAutoWlIgnore = 1;
-    }
-    else {
-        p->scanConfig.bAutoWlIgnore = 0;
-    }
-    p->scanConfig.bEndOnRpt = 0;
-#if !RADIO_CONF_BLE5
-    p->scanReqLen = 0;
-    p->pScanReqData = NULL;
-#endif
-    p->pDeviceAddress = (uint16_t *)own_addr;
-    p->pWhiteList = NULL;
-    p->timeoutTrigger.triggerType = TRIG_REL_START;
-    p->timeoutTime = scan_window;
-    p->endTrigger.triggerType = TRIG_NEVER;
-}
-
-/*---------------------------------------------------------------------------*/
 /* INITIATOR functions                                                       */
 /*---------------------------------------------------------------------------*/
 void
@@ -443,11 +267,9 @@ rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_ble5InitiatorPar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 1;
     c->startTime = start_time;
     c->pOutput = (rfc_ble5ScanInitOutput_t *)output;
 
-	//c->phyMode.mainMode = 1;
 	c->txPower = tx_power;
 	c->rangeDelay = 0;
 #else
@@ -465,10 +287,6 @@ rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->startTime = start_time;
     c->pOutput = (rfc_bleInitiatorOutput_t *)output;
 #endif
-	
-	//printf("size of init_cmd: %d | ", sizeof(*c));
-	//printf("size of init_output: %d\n", sizeof(*c->pOutput));
-
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -515,8 +333,6 @@ rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
     p->timeoutTrigger.triggerType = TRIG_REL_START;
     p->timeoutTime = initiator_time;
     p->endTrigger.triggerType = TRIG_NEVER;
-
-	//printf("size of init_params: %d | ", sizeof(*p));
 }
 
 /*---------------------------------------------------------------------------*/
@@ -638,7 +454,6 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->startTime = start_time;
     c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
 
-	//c->phyMode.mainMode = 1;
 	c->txPower = tx_power;
 	c->rangeDelay = 0;
 #else

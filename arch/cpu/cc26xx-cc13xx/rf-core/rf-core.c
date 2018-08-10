@@ -179,11 +179,9 @@ rf_core_send_cmd(uint32_t cmd, uint32_t *status)
       return RF_CORE_CMD_ERROR;
     }
   } while((*status & RF_CORE_CMDSTA_RESULT_MASK) == RF_CORE_CMDSTA_PENDING);
-
   if(!interrupts_disabled) {
     ti_lib_int_master_enable();
   }
-
   /*
    * If we reach here the command is no longer pending. It is either completed
    * successfully or with error
@@ -399,10 +397,13 @@ rf_core_set_modesel()
   } else if(chip_type == CHIP_TYPE_CC1350) {
     HWREG(PRCM_BASE + PRCM_O_RFCMODESEL) = PRCM_RFCMODESEL_CURR_MODE5;
     rv = RF_CORE_CMD_OK;
-  } else if (chip_type == CHIP_TYPE_CC2640R2) {
-	  HWREG(PRCM_BASE + PRCM_O_RFCMODESEL) = PRCM_RFCMODESEL_CURR_MODE1;
-	  rv = RF_CORE_CMD_OK;
   }
+#if defined(ThisLibraryIsFor_CC26x0R2_HaltIfViolated)
+  else if (chip_type == CHIP_TYPE_CC2640R2) {
+    HWREG(PRCM_BASE + PRCM_O_RFCMODESEL) = PRCM_RFCMODESEL_CURR_MODE1;
+    rv = RF_CORE_CMD_OK;
+  }
+#endif
 
   return rv;
 }

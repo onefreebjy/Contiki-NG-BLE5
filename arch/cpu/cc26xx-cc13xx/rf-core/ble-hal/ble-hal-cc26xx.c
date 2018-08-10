@@ -64,22 +64,13 @@
 
 #include "rf-core/ble-hal/rf-ble-cmd.h"
 #include "driverlib/rf_ble_cmd.h"
+#include "rf_patches/rf_patch_cpe_bt5.h"
 /*---------------------------------------------------------------------------*/
 #include "sys/log.h"
 #include "../../../../../os/sys/rtimer.h"
 
 #define LOG_MODULE "BLE-RADIO"
 #define LOG_LEVEL LOG_LEVEL_MAIN
-
-#define DEBUG 1
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINTADDR(addr) PRINTF(" %02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7])
-#else
-#define PRINTF(...)
-#define PRINTADDR(addr)
-#endif
 /*---------------------------------------------------------------------------*/
 #define CMD_GET_STATUS(X)         (((rfc_radioOp_t *)X)->status)
 #define RX_ENTRY_STATUS(X)        (((rfc_dataEntry_t *)X)->status)
@@ -173,7 +164,6 @@ typedef struct {
 
 static ble_adv_param_t adv_param;
 static void advertising_event(struct rtimer *t, void *ptr);
-//static void extended_advertising_event(struct rtimer *t, void *ptr);
 /*---------------------------------------------------------------------------*/
 /* CONNECTION data structures                          */
 #define BLE_MODE_MAX_CONNECTIONS    1
@@ -435,11 +425,27 @@ on(void)
   oscillators_request_hf_xosc();
   if(!rf_core_is_accessible()) {
     /* boot the rf core */
+#if RADIO_CONF_BLE5
+    /*    boot and apply Bluetooth 5 Patch    */
+    if (rf_core_power_up() != RF_CORE_CMD_OK) {
+      LOG_ERR("rf_core_boot: rf_core_power_up() failed\n");
+      rf_core_power_down();
+      return RF_CORE_CMD_ERROR;
+    }
+      
+    rf_patch_cpe_bt5();
+      
+    if (rf_core_start_rat() != RF_CORE_CMD_OK) {
+      LOG_ERR("rf_core_boot: rf_core_start_rat() failed\n");
+      rf_core_power_down();
+      return RF_CORE_CMD_ERROR;
+    }
+#else
     if(rf_core_boot() != RF_CORE_CMD_OK) {
       LOG_ERR("ble_controller_reset() could not boot rf-core\n");
       return BLE_RESULT_ERROR;
     }
-
+#endif
     rf_core_setup_interrupts(0);
     oscillators_switch_to_hf_xosc();
 
@@ -825,39 +831,6 @@ const struct ble_hal_driver ble_hal =
   read_connection_interval
 };
 /*---------------------------------------------------------------------------*/
-/*	Used to print command num and status	*/
-static void
-print_cmd_info(rfc_radioOp_t * cmd)
-{
-	return;
-	PRINTF("DBG: cmd:0x%04X | ", ((rfc_radioOp_t *)cmd)->commandNo);
-
-//    switch (CMD_GET_STATUS(cmd))
-//    {
-//    case RF_CORE_RADIO_OP_STATUS_BLE_DONE_OK:
-//        LOG_DBG("status:DONE_OK\n");
-//        break;
-//    case RF_CORE_RADIO_OP_STATUS_BLE_DONE_RXTIMEOUT:
-//        LOG_DBG("status:DONE_RXTIMEOUT\n");
-//        break;
-//    case RF_CORE_RADIO_OP_STATUS_BLE_DONE_NOSYNC:
-//        LOG_DBG("status:DONE_NOSYNC\n");
-//        break;
-//    case RF_CORE_RADIO_OP_STATUS_BLE_DONE_RXERR:
-//        LOG_DBG("status:DONE_RXERR\n");
-//        break;
-//    case RF_CORE_RADIO_OP_STATUS_BLE_DONE_CONNECT:
-//        LOG_DBG("status:DONE_CONNECT\n");
-//        break;
-//    case RF_CORE_RADIO_OP_STATUS_BLE_ERROR_RXBUF:
-//        LOG_DBG("status:ERROR_RXBUF\n");
-//        break;
-//    default:
-		PRINTF("status:0x%04X\n", CMD_GET_STATUS(cmd));
-//    }
-}
-
-/*---------------------------------------------------------------------------*/
 static void
 advertising_rx(ble_adv_param_t *param)
 {
@@ -866,10 +839,6 @@ advertising_rx(ble_adv_param_t *param)
   uint8_t *rx_data;
   ble_conn_param_t *c_param = &conn_param[0];
   rtimer_clock_t wakeup;
-
-  print_cmd_info((rfc_radioOp_t *)(param->cmd_buf));
-  /*if(CMD_GET_STATUS(param->cmd_buf)!= RF_CORE_RADIO_OP_STATUS_BLE_DONE_NOSYNC)
-  PRINTF("DBG: cmd:0x%04X status:0x%04X\n", ((rfc_CMD_BLE_INITIATOR_t *)(param->cmd_buf))->commandNo, CMD_GET_STATUS(param->cmd_buf));*/
 
   LOG_DBG("RX_ENTRY_STATUS: %d ", RX_ENTRY_STATUS(param->rx_queue_current));
   while(RX_ENTRY_STATUS(param->rx_queue_current) == DATA_ENTRY_FINISHED) {
@@ -961,71 +930,6 @@ advertising_event(struct rtimer *t, void *ptr)
       rf_ble_cmd_send(param->cmd_buf);
       rf_ble_cmd_wait(param->cmd_buf);
   }
-
-    //uint32_t startTime = 0;
-//    printf("DBG: sln 1\n");
-//    /*      extended advertisement params     */
-//    rf_ble_cmd_create_adv_ext_params(param->param_buf, param->adv_data,
-//                                     param->own_addr_type, (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//
-//    uint8_t aux_param[PARAM_BUFFER_SIZE];
-//    rf_ble_cmd_create_adv_aux_params(aux_param, &param->rx_queue,
-//                                     param->adv_data, param->scan_rsp_data, param->own_addr_type,
-//                                     (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//
-//    /*      extended advertisement cmds     */
-//    uint8_t aux_cmd[CMD_BUFFER_SIZE];
-//    uint8_t aux_output[OUTPUT_BUFFER_SIZE];
-//    rf_ble_cmd_create_adv_aux_cmd(aux_cmd, NULL, 36, aux_param, aux_output);
-//
-//    rf_ble_cmd_create_adv_ext_cmd(param->cmd_buf, (rfc_CMD_BLE5_ADV_AUX_t *)aux_cmd,
-//                                  BLE_ADV_CHANNEL_1, param->param_buf, param->output_buf);
-//
-//    if (param->channel_map & BLE_ADV_CHANNEL_1_MASK) {
-//        /* advertising on advertisement channel 1 */
-//        rf_ble_cmd_send(param->cmd_buf);
-//        //rf_ble_cmd_wait(param->cmd_buf);
-//
-//        *param->cmd_buf = *aux_cmd;
-//        *param->param_buf = *aux_param;
-//        *param->output_buf = *aux_output;
-//        /* advertising on secondary channel */
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//    }
-    
-//    printf("DBG: sln 2\n");
-//    if (param->channel_map & BLE_ADV_CHANNEL_1_MASK) {
-//        /* advertising on advertisement channel 1 */
-//        rf_ble_cmd_create_adv_ext_params(param->param_buf, param->adv_data,
-//                                         param->own_addr_type, (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//        rf_ble_cmd_create_adv_ext_cmd(param->cmd_buf, (rfc_CMD_BLE5_ADV_AUX_t *)param->param_buf,
-//                                      BLE_ADV_CHANNEL_1, param->param_buf, param->output_buf);
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//
-//        rf_ble_cmd_create_adv_aux_params(param->param_buf, &param->rx_queue,
-//                                         param->adv_data, param->scan_rsp_data, param->own_addr_type,
-//                                         (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//        rf_ble_cmd_create_adv_aux_cmd(param->cmd_buf, NULL, 36, param->param_buf, param->output_buf);
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//    }
-    
-//    printf("DBG: sln 3\n");
-//    /*      extended advertisement params     */
-//    rf_ble_cmd_create_adv_aux_params(param->param_buf, &param->rx_queue,
-//                                     param->adv_data, param->scan_rsp_data, param->own_addr_type,
-//                                     (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//
-//    /*      extended advertisement cmds     */
-//    rf_ble_cmd_create_adv_aux_cmd(param->cmd_buf, NULL, 36, param->param_buf, param->output_buf);
-//
-//    if (param->channel_map & BLE_ADV_CHANNEL_1_MASK) {
-//        /* advertising on secondary channel */
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//    }
     
   off();
   advertising_rx(param);
@@ -1040,60 +944,6 @@ advertising_event(struct rtimer *t, void *ptr)
   rtimer_set(&param->timer, wakeup, 0, advertising_event, (void *)param);
 }
 /*---------------------------------------------------------------------------*/
-//static void
-//extended_advertising_event(struct rtimer *t, void *ptr)
-//{
-//    ble_adv_param_t *param = (ble_adv_param_t *)ptr;
-//    uint32_t wakeup;
-//
-//    if(on() != BLE_RESULT_OK) {
-//        LOG_ERR("BLE-HAL: advertising event: could not enable rf core\n");
-//        return;
-//    }
-//
-//
-//    uint32_t startTime = 0;
-//    /*      extended advertisement params     */
-//    rf_ble_cmd_create_adv_ext_params(param->param_buf, param->adv_data,
-//        param->own_addr_type, (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//
-//    uint8_t aux_param[PARAM_BUFFER_SIZE];
-//    rf_ble_cmd_create_adv_aux_params(aux_param, &param->rx_queue,
-//        param->adv_data, param->scan_rsp_data, param->own_addr_type,
-//        (uint8_t *)BLE_ADDR_LOCATION, startTime);
-//
-//    /*      extended advertisement cmds     */
-//    uint8_t aux_cmd[CMD_BUFFER_SIZE];
-//    uint8_t aux_output[OUTPUT_BUFFER_SIZE];
-//    rf_ble_cmd_create_adv_aux_cmd(aux_cmd, NULL, 36, &aux_param, aux_output);
-//
-//    rf_ble_cmd_create_adv_ext_cmd(param->cmd_buf, (rfc_CMD_BLE5_ADV_AUX_t *)aux_cmd,
-//        BLE_ADV_CHANNEL_1, param->param_buf, param->output_buf);
-//
-//    if (param->channel_map & BLE_ADV_CHANNEL_1_MASK) {
-//        /* advertising on advertisement channel 1 */
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//
-//        *param->cmd_buf = *aux_cmd;
-//        /* advertising on secondary channel */
-//        rf_ble_cmd_send(param->cmd_buf);
-//        rf_ble_cmd_wait(param->cmd_buf);
-//    }
-//
-//    off();
-//    advertising_rx(param);
-//
-//    if(conn_param[0].active == 1) {
-//        LOG_INFO("stop advertising\n");
-//        return;
-//    }
-//
-//    param->start_rt = param->start_rt + ticks_from_unit(param->adv_interval, TIME_UNIT_MS);
-//    wakeup = adv_param.start_rt - ADV_PREPROCESSING_TIME_TICKS;
-//    rtimer_set(&param->timer, wakeup, 0, extended_advertising_event, (void *)param);
-//}
-/*---------------------------------------------------------------------------*/
 #if UIP_CONF_ROUTER
 static void
 initiator_rx(ble_init_param_t *init)
@@ -1105,10 +955,7 @@ initiator_rx(ble_init_param_t *init)
 	linkaddr_t sender_addr;
 
 	LOG_DBG("RX_ENTRY_STATUS: %d ", RX_ENTRY_STATUS(init->rx_queue_current));
-	print_cmd_info((rfc_radioOp_t *)(init->cmd_buf));
-	/*if(CMD_GET_STATUS(init->cmd_buf)!= RF_CORE_RADIO_OP_STATUS_BLE_DONE_RXTIMEOUT)
-	PRINTF("DBG: cmd:0x%04X status:0x%04X\n", ((rfc_CMD_BLE_INITIATOR_t *)(init->cmd_buf))->commandNo,CMD_GET_STATUS(init->cmd_buf));*/
-
+	
 	while (RX_ENTRY_STATUS(init->rx_queue_current) == DATA_ENTRY_FINISHED) {
 		LOG_DBG("initiator_rx() entry finished\n");
 		rx_data = RX_ENTRY_DATA_PTR(init->rx_queue_current);
@@ -1169,8 +1016,10 @@ initiator_event(struct rtimer *t, void *ptr)
 	whitelist[0].conf.bEnable = 1;  /* enabled */
 	whitelist[0].conf.addrType = 0; /* public */
 	whitelist[0].conf.bWlIgn = 0; /* not ignored */
-	whitelist[0].conf.bPrivIgn = 0;
-	//PRINTF("DBG: INIT_PEER_ADDR:0x%08llX\n", BLE_MODE_INIT_PEER_ADDR);
+#if defined(ThisLibraryIsFor_CC26x0R2_HaltIfViolated)
+    whitelist[0].conf.bPrivIgn = 0;
+#endif
+	LOG_DBG("INIT_PEER_ADDR: 0x%08llX\n", BLE_MODE_INIT_PEER_ADDR);
 	whitelist[0].address = (BLE_MODE_INIT_PEER_ADDR & 0xFFFF);
 	whitelist[0].addressHi = (BLE_MODE_INIT_PEER_ADDR & 0xFFFFFFFF0000) >> 16;
 
