@@ -615,7 +615,7 @@ discard:
 static void
 rs_input(void)
 {
-
+    LOG_DBG("unused default router list: defrt:%d",(int)(defrt->isinfinite));
   LOG_INFO("Received RS from ");
   LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
   LOG_INFO_(" to ");
