@@ -1,4 +1,5 @@
 # srf06-cc26xx platform makefile
+
 ifndef CONTIKI
   $(error CONTIKI not defined! You must specify where CONTIKI resides!)
 endif

@@ -6,4 +6,3 @@ CONTIKI_TARGET_DIRS += launchpad/cc2640r2
 
 ### Include the common launchpad makefile
 include $(PLATFORM_ROOT_DIR)/launchpad/Makefile.launchpad
-
