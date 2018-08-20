@@ -63,6 +63,8 @@
 #include <string.h>
 
 #include "rf-core/ble-hal/rf-ble-cmd.h"
+
+#include "rf_patches/rf_patch_cpe_bt5.h"
 /*---------------------------------------------------------------------------*/
 #include "sys/log.h"
 #define LOG_MODULE "BLE-RADIO"
@@ -422,11 +424,27 @@ on(void)
   oscillators_request_hf_xosc();
   if(!rf_core_is_accessible()) {
     /* boot the rf core */
+#if RADIO_CONF_BLE5
+    /*    boot and apply Bluetooth 5 Patch    */
+    if (rf_core_power_up() != RF_CORE_CMD_OK) {
+      LOG_ERR("rf_core_boot: rf_core_power_up() failed\n");
+      rf_core_power_down();
+      return RF_CORE_CMD_ERROR;
+    }
+    
+    rf_patch_cpe_bt5();
+    
+    if (rf_core_start_rat() != RF_CORE_CMD_OK) {
+      LOG_ERR("rf_core_boot: rf_core_start_rat() failed\n");
+      rf_core_power_down();
+      return RF_CORE_CMD_ERROR;
+    }
+#else
     if(rf_core_boot() != RF_CORE_CMD_OK) {
       LOG_ERR("ble_controller_reset() could not boot rf-core\n");
       return BLE_RESULT_ERROR;
     }
-
+#endif
     rf_core_setup_interrupts(0);
     oscillators_switch_to_hf_xosc();
 

@@ -57,6 +57,62 @@ static uint16_t tx_power = 0x3161;                /*  0 dBm */
 /*static uint16_t tx_power = 0x0CCB;                / *  -15 dBm * / */
 /*---------------------------------------------------------------------------*/
 /* BLE overrides */
+#if RADIO_CONF_BLE5
+uint32_t pOverridesCommon[] =
+{
+  // Rx: Set LNA IB trim value based on the selected defaultPhy.mainMode setting. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
+  // Rx: Set LNA IB offset used for automatic software compensation to 0
+  (uint32_t)0x00008883,
+  // Synth: Use 24 MHz crystal, enable extra PLL filtering
+  (uint32_t)0x02010403,
+  // Synth: Set fine top and bottom code to 127 and 0
+  HW_REG_OVERRIDE(0x4020, 0x7F00),
+  // Synth: Configure faster calibration
+  HW32_ARRAY_OVERRIDE(0x4004, 1),
+  // Synth: Configure faster calibration
+  (uint32_t)0x1C0C0618,
+  // Synth: Configure faster calibration
+  (uint32_t)0xC00401A1,
+  // Synth: Configure faster calibration
+  (uint32_t)0x21010101,
+  // Synth: Configure faster calibration
+  (uint32_t)0xC0040141,
+  // Synth: Configure faster calibration
+  (uint32_t)0x00214AD3,
+  // Synth: Decrease synth programming time-out by 90 us (0x0298 RAT ticks = 166 us)
+  (uint32_t)0x02980243,
+  // Bluetooth 5: Set correct total clock accuracy for received AuxPtr assuming local sleep clock of 50 ppm
+  (uint32_t)0x0E490823,
+  // override_frontend_id.xml
+  (uint32_t)0xFFFFFFFF,
+};
+
+uint32_t pOverrides1Mbps[] =
+{
+  // Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
+  // Rx: Configure AGC to use gain table for improved performance
+  HW_REG_OVERRIDE(0x6084, 0x05F8),
+  (uint32_t)0xFFFFFFFF,
+};
+
+uint32_t pOverrides2Mbps[] =
+{
+  // Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
+  (uint32_t)0xFFFFFFFF,
+};
+
+uint32_t pOverridesCoded[] =
+{
+  // Rx: Set LNA IB trim to 0xF (maximum)
+  ADI_HALFREG_OVERRIDE(0,4,0xF,0xF),
+  // Rx: Override AGC target gain to improve performance
+  HW_REG_OVERRIDE(0x6088, 0x0018),
+  (uint32_t)0xFFFFFFFF,
+};
+#else
 static uint32_t ble_overrides[] = {
   0x00364038, /* Synth: Set RTRIM (POTAILRESTRIM) to 6 */
   0x000784A3, /* Synth: Set FREF = 3.43 MHz (24 MHz / 7) */
@@ -67,6 +123,7 @@ static uint32_t ble_overrides[] = {
   0x008F88B3, /* GPIO mode: https://e2e.ti.com/support/wireless_connectivity/proprietary_sub_1_ghz_simpliciti/f/156/t/488244?*/
   0xFFFFFFFF, /* End of override list */
 };
+#endif
 /*---------------------------------------------------------------------------*/
 unsigned short
 rf_ble_cmd_send(uint8_t *command)
