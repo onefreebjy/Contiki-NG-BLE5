@@ -616,6 +616,7 @@ static void
 rs_input(void)
 {
 
+  defrt = NULL;
   LOG_INFO("Received RS from ");
   LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
   LOG_INFO_(" to ");
