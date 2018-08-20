@@ -97,14 +97,32 @@ rf_ble_cmd_wait(uint8_t *command)
 unsigned short
 rf_ble_cmd_setup_ble_mode(void)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_RADIO_SETUP_t cmd;
+  
+  /* Create radio setup command */
+  rf_core_init_radio_op((rfc_radioOp_t *)&cmd, sizeof(cmd), CMD_BLE5_RADIO_SETUP);
+  
+  cmd.startTrigger.bEnaCmd = 0;
+  cmd.config.frontEndMode = 0;
+  cmd.config.biasMode = 0;
+  cmd.config.analogCfgMode = 0;
+  cmd.config.bNoFsPowerUp = 0;
+  cmd.defaultPhy.mainMode = phy;
+  cmd.defaultPhy.coding = coding;
+  cmd.pRegOverrideCommon = pOverridesCommon;
+  cmd.pRegOverride1Mbps = pOverrides1Mbps;
+  cmd.pRegOverride2Mbps = pOverrides2Mbps;
+  cmd.pRegOverrideCoded = pOverridesCoded;
+#else
   rfc_CMD_RADIO_SETUP_t cmd;
 
   /* Create radio setup command */
   rf_core_init_radio_op((rfc_radioOp_t *)&cmd, sizeof(cmd), CMD_RADIO_SETUP);
-
-  cmd.txPower = tx_power;
-  cmd.pRegOverride = ble_overrides;
   cmd.mode = 0;
+  cmd.pRegOverride = ble_overrides;
+#endif
+  cmd.txPower = tx_power;
 
   /* Send Radio setup to RF Core */
   if(rf_ble_cmd_send((uint8_t *)&cmd) != RF_BLE_CMD_OK) {
@@ -121,10 +139,20 @@ void
 rf_ble_cmd_create_adv_cmd(uint8_t *command, uint8_t channel,
                           uint8_t *param, uint8_t *output)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_ADV_t *c = (rfc_CMD_BLE5_ADV_t *)command;
+  
+  memset(c, 0x00, sizeof(rfc_CMD_BLE5_ADV_t));
+  
+  c->commandNo = CMD_BLE5_ADV;
+  c->rangeDelay = 0;
+  c->txPower = tx_power;
+#else
   rfc_CMD_BLE_ADV_t *c = (rfc_CMD_BLE_ADV_t *)command;
 
   memset(c, 0x00, sizeof(rfc_CMD_BLE_ADV_t));
   c->commandNo = CMD_BLE_ADV;
+#endif
   c->condition.rule = COND_NEVER;
   c->whitening.bOverride = 0;
   c->channel = channel;
@@ -169,6 +197,23 @@ void
 rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
                                 uint8_t *output, uint32_t start_time)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_INITIATOR_t *c = (rfc_CMD_BLE5_INITIATOR_t *)cmd;
+  
+  memset(c, 0x00, sizeof(rfc_CMD_BLE5_INITIATOR_t));
+  
+  c->commandNo = CMD_BLE5_INITIATOR;
+  c->condition.rule = COND_NEVER;
+  c->whitening.bOverride = 0;
+  c->channel = channel;
+  c->pParams = (rfc_ble5InitiatorPar_t *)params;
+  c->startTrigger.triggerType = TRIG_ABSTIME;
+  c->startTime = start_time;
+  c->pOutput = (rfc_ble5ScanInitOutput_t *)output;
+  
+  c->txPower = tx_power;
+  c->rangeDelay = 0;
+#else
   rfc_CMD_BLE_INITIATOR_t *c = (rfc_CMD_BLE_INITIATOR_t *)cmd;
   
   memset(c, 0x00, sizeof(rfc_CMD_BLE_INITIATOR_t));
@@ -181,6 +226,7 @@ rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTrigger.triggerType = TRIG_ABSTIME;
   c->startTime = start_time;
   c->pOutput = (rfc_bleInitiatorOutput_t *)output;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -190,8 +236,16 @@ rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
                                    ble_addr_type_t peer_addr_type, uint8_t *peer_addr,
                                    uint32_t connect_time, uint8_t *conn_req_data)
 {
+#if RADIO_CONF_BLE5
+  rfc_ble5InitiatorPar_t *p = (rfc_ble5InitiatorPar_t *)param;
+  p->backoffPar.bLastSucceeded = 0;
+  p->backoffPar.bLastFailed = 0;
+  p->maxWaitTimeForAuxCh = 0;
+  p->rxStartTime = 0;
+  p->rxListenTime = 0;
+#else
   rfc_bleInitiatorPar_t *p = (rfc_bleInitiatorPar_t *)param;
-
+#endif
   p->pRxQ = rx_queue;
   p->rxConfig.bAutoFlushIgnored = 1;
   p->rxConfig.bAutoFlushCrcErr = 0;
@@ -225,6 +279,25 @@ void
 rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
                             uint8_t *output, uint32_t start_time)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_SLAVE_t *c = (rfc_CMD_BLE5_SLAVE_t *)cmd;
+  
+  memset(c, 0x00, sizeof(rfc_CMD_BLE5_SLAVE_t));
+  
+  c->commandNo = CMD_BLE5_SLAVE;
+  c->condition.rule = COND_NEVER;
+  c->whitening.bOverride = 0;
+  c->channel = channel;
+  c->pParams = (rfc_ble5SlavePar_t *)params;
+  c->startTrigger.triggerType = TRIG_ABSTIME;
+  c->startTime = start_time;
+  c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
+  
+  c->phyMode.mainMode = phy;
+  c->phyMode.coding = coding;
+  c->txPower = tx_power;
+  c->rangeDelay = 0;
+#else
   rfc_CMD_BLE_SLAVE_t *c = (rfc_CMD_BLE_SLAVE_t *)cmd;
 
   memset(c, 0x00, sizeof(rfc_CMD_BLE_SLAVE_t));
@@ -238,6 +311,7 @@ rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTrigger.pastTrig = 0;
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -247,8 +321,13 @@ rf_ble_cmd_create_slave_params(uint8_t *params, dataQueue_t *rx_queue,
                                uint8_t crc_init_2, uint32_t win_size,
                                uint32_t window_widening, uint8_t first_packet)
 {
+#if RADIO_CONF_BLE5
+  rfc_ble5SlavePar_t *p = (rfc_ble5SlavePar_t *)params;
+  p->maxRxPktLen = 255;
+  p->maxLenLowRate = 0;
+#else
   rfc_bleSlavePar_t *p = (rfc_bleSlavePar_t *)params;
-
+#endif
   p->pRxQ = rx_queue;
   p->pTxQ = tx_queue;
   p->rxConfig.bAutoFlushIgnored = 1;
@@ -293,6 +372,25 @@ void
 rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
                              uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding)
 {
+#if RADIO_CONF_BLE5
+  rfc_CMD_BLE5_MASTER_t *c = (rfc_CMD_BLE5_MASTER_t *)cmd;
+  
+  memset(c, 0x00, sizeof(rfc_CMD_BLE5_MASTER_t));
+  
+  c->commandNo = CMD_BLE5_MASTER;
+  c->condition.rule = COND_NEVER;
+  c->whitening.bOverride = 0;
+  c->channel = channel;
+  c->pParams = (rfc_ble5MasterPar_t *)params;
+  c->startTrigger.triggerType = TRIG_ABSTIME;
+  c->startTime = start_time;
+  c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
+  
+  c->phyMode.mainMode = phy;
+  c->phyMode.coding = coding;
+  c->txPower = tx_power;
+  c->rangeDelay = 0;
+#else
   rfc_CMD_BLE_MASTER_t *c = (rfc_CMD_BLE_MASTER_t *)cmd;
   
   memset(c, 0x00, sizeof(rfc_CMD_BLE_MASTER_t));
@@ -305,6 +403,7 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTrigger.triggerType = TRIG_ABSTIME;
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -313,8 +412,13 @@ rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
                                 uint8_t crc_init_0, uint8_t crc_init_1,
                                 uint8_t crc_init_2, uint8_t first_packet)
 {
+#if RADIO_CONF_BLE5
+  rfc_ble5MasterPar_t *p = (rfc_ble5MasterPar_t *)params;
+  p->maxRxPktLen = 255;
+  p->maxLenLowRate = 0;
+#else
   rfc_bleMasterPar_t *p = (rfc_bleMasterPar_t *)params;
-
+#endif
   p->pRxQ = rx_queue;
   p->pTxQ = tx_queue;
   p->rxConfig.bAutoFlushIgnored = 1;

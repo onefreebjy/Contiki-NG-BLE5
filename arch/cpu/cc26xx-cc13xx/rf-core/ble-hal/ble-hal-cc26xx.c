@@ -117,9 +117,15 @@ ticks_to_unit(rtimer_clock_t value, uint32_t unit)
   return (uint32_t)temp;
 }
 /*---------------------------------------------------------------------------*/
+#if RADIO_CONF_BLE5
+#define CMD_BUFFER_SIZE         28
+#define PARAM_BUFFER_SIZE       48
+#define OUTPUT_BUFFER_SIZE        24
+#else
 #define CMD_BUFFER_SIZE         24
 #define PARAM_BUFFER_SIZE       36
 #define OUTPUT_BUFFER_SIZE        24
+#endif
 /*---------------------------------------------------------------------------*/
 /* ADVERTISING data structures												 */
 #define ADV_RX_BUFFERS_OVERHEAD     8
@@ -934,9 +940,11 @@ initiator_rx(ble_init_param_t *init)
       for (i = 0; i < BLE_ADDR_SIZE; i++) {
         conn->peer_address[i] = rx_data[BLE_ADDR_SIZE + 1 - i];
       }
-      
+#if RADIO_CONF_BLE5
+    conn->timestamp_rt = ticks_from_unit(((rfc_ble5ScanInitOutput_t *)init->output_buf)->timeStamp, TIME_UNIT_RF_CORE);
+#else
     conn->timestamp_rt = ticks_from_unit(((rfc_bleInitiatorOutput_t *)init->output_buf)->timeStamp, TIME_UNIT_RF_CORE);
-      
+#endif
       wakeup = conn->timestamp_rt + ticks_from_unit((conn->win_offset + conn->interval), TIME_UNIT_1_25_MS) - CONN_PREPROCESSING_TIME_TICKS;
       rtimer_set(&conn->timer, wakeup, 0, connection_event_master, (void *)conn);
       conn->active = 1;
@@ -1157,7 +1165,11 @@ connection_rx(ble_conn_param_t *param)
 
   while(RX_ENTRY_STATUS(param->rx_queue_current) == DATA_ENTRY_FINISHED) {
     rx_data = RX_ENTRY_DATA_PTR(param->rx_queue_current);
+#if RADIO_CONF_BLE5
+    len = RX_ENTRY_DATA_LENGTH(param->rx_queue_current) - 7 - 2;  /* last 9 bytes are status, timestamp, ... */
+#else
     len = RX_ENTRY_DATA_LENGTH(param->rx_queue_current) - 6 - 2;  /* last 8 bytes are status, timestamp, ... */
+#endif
     channel = (rx_data[len + 3] & 0x3F);
     frame_type = rx_data[0] & 0x03;
     more_data = (rx_data[0] & 0x10) >> 4;
