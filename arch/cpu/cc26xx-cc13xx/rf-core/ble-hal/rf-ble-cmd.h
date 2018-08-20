@@ -68,9 +68,10 @@ unsigned short rf_ble_cmd_wait(uint8_t *cmd);
 /*---------------------------------------------------------------------------*/
 /**
  * \brief Initializes the radio core to be used as a BLE radio
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
  * \return RF_CORE_CMD_OK or RF_CORE_CMD_ERROR
  */
-unsigned short rf_ble_cmd_setup_ble_mode(void);
+unsigned short rf_ble_cmd_setup_ble_mode(uint8_t phy, uint8_t coding);
 
 /*---------------------------------------------------------------------------*/
 /**
@@ -138,7 +139,7 @@ void rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
  *          The time in rf_core_ticks when the connection event will start
  */
 void rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *param,
-                                 uint8_t *output, uint32_t start_time);
+                                 uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding);
 
 /*---------------------------------------------------------------------------*/
 /**
@@ -175,7 +176,7 @@ void rf_ble_cmd_create_slave_params(uint8_t *param, dataQueue_t *rx_queue,
  *      //  DESCRIPTION TO PARAMS NEEDED    //
  */
 void rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-                                  uint8_t *output, uint32_t start_time);
+                                  uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding);
 /*---------------------------------------------------------------------------*/
 /**
  * \brief Creates BLE radio command parameters that are used to set up

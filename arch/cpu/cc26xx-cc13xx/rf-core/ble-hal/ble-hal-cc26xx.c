@@ -274,7 +274,7 @@ static void connection_event_master(struct rtimer *t, void *ptr);
 #define INIT_RX_BUFFERS_LEN       (INIT_RX_BUFFERS_OVERHEAD + INIT_RX_BUFFERS_DATA_LEN)
 #define INIT_RX_BUFFERS_NUM       2
 
-#define INIT_PREPROCESSING_TIME_TICKS 65
+#define INIT_PREPROCESSING_TIME_TICKS 70
 
 typedef struct {
 	uint16_t init_interval;
@@ -297,6 +297,9 @@ static ble_init_param_t init_param;
 #if UIP_CONF_ROUTER
 static void initiator_event(struct rtimer *t, void *ptr);
 #endif
+/*---------------------------------------------------------------------------*/
+#define BLE5_PHY_MODE 1
+#define BLE5_PHY_CODING 1
 /*---------------------------------------------------------------------------*/
 PROCESS(ble_hal_conn_rx_process, "BLE/CC26xx connection RX process");
 process_event_t rx_data_event;
@@ -449,7 +452,7 @@ on(void)
     rf_core_setup_interrupts(0);
     oscillators_switch_to_hf_xosc();
 
-    if(rf_ble_cmd_setup_ble_mode() != RF_BLE_CMD_OK) {
+    if(rf_ble_cmd_setup_ble_mode(BLE5_PHY_MODE, BLE5_PHY_CODING) != RF_BLE_CMD_OK) {
       LOG_ERR("could not setup rf-core to BLE mode\n");
       return BLE_RESULT_ERROR;
     }
@@ -1075,9 +1078,7 @@ initiator_event(struct rtimer *t, void *ptr)
 	while (RTIMER_NOW() < (start_time + ticks_from_unit(init->init_window, TIME_UNIT_1_25_MS)) && (wait_status != RF_BLE_CMD_OK)) {
 		wait_status = rf_ble_cmd_wait(init->cmd_buf);
 	}
-	if (wait_status != RF_BLE_CMD_OK) {
-		LOG_ERR("initiating event: could not wait for command. status: 0x%04X\n", CMD_GET_STATUS(init->cmd_buf));
-	}
+
 	off();
 	initiator_rx(init);
 
@@ -1192,7 +1193,11 @@ connection_rx(ble_conn_param_t *param)
 
   while(RX_ENTRY_STATUS(param->rx_queue_current) == DATA_ENTRY_FINISHED) {
     rx_data = RX_ENTRY_DATA_PTR(param->rx_queue_current);
+#if RADIO_CONF_BLE5
+    len = RX_ENTRY_DATA_LENGTH(param->rx_queue_current) - 7 - 2;  /* last 9 bytes are status, timestamp, ... */
+#else
     len = RX_ENTRY_DATA_LENGTH(param->rx_queue_current) - 6 - 2;  /* last 8 bytes are status, timestamp, ... */
+#endif
     channel = (rx_data[len + 3] & 0x3F);
     frame_type = rx_data[0] & 0x03;
     more_data = (rx_data[0] & 0x10) >> 4;
@@ -1231,6 +1236,7 @@ connection_rx(ble_conn_param_t *param)
   }
 }
 /*---------------------------------------------------------------------------*/
+static int loss_count = 0;
 static void
 connection_event_slave(struct rtimer *t, void *ptr)
 {
@@ -1290,7 +1296,7 @@ connection_event_slave(struct rtimer *t, void *ptr)
                                    ticks_to_unit(CONN_WINDOW_WIDENING_TICKS, TIME_UNIT_RF_CORE), first_packet);
 
     rf_ble_cmd_create_slave_cmd(conn->cmd_buf, conn->mapped_channel, conn->param_buf, conn->output_buf,
-                                ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE));
+                                ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE), BLE5_PHY_MODE, BLE5_PHY_CODING);
 
     if(on() != BLE_RESULT_OK) {
       LOG_ERR("connection_event: could not enable radio core\n");
@@ -1310,8 +1316,8 @@ connection_event_slave(struct rtimer *t, void *ptr)
     off();
       
     if(CMD_GET_STATUS(conn->cmd_buf) != RF_CORE_RADIO_OP_STATUS_BLE_DONE_OK) {
-		LOG_ERR("command status: 0x%04X; connection event counter: %d, channel: %d\n",
-              CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel);
+        LOG_ERR("command status: 0x%04X; connection event counter: %d, channel: %d, loss: %d\n",
+              CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel, ++loss_count);
     }
 
     /* free finished TX buffers */
@@ -1383,7 +1389,7 @@ connection_event_master(struct rtimer *t, void *ptr)
 		conn->crc_init_0, conn->crc_init_1, conn->crc_init_2, first_packet);
 
 	rf_ble_cmd_create_master_cmd(conn->cmd_buf, conn->mapped_channel, conn->param_buf, conn->output_buf,
-		ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE));
+		ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE), BLE5_PHY_MODE, BLE5_PHY_CODING);
 
 	if (on() != BLE_RESULT_OK) {
 		LOG_ERR("connection_event: could not enable radio core\n");
@@ -1405,8 +1411,8 @@ connection_event_master(struct rtimer *t, void *ptr)
 		LOG_ERR("conn_event %4d skipped\n", conn->counter);
 	}
 	else if (CMD_GET_STATUS(conn->cmd_buf) != RF_CORE_RADIO_OP_STATUS_BLE_DONE_OK) {
-		LOG_ERR("conn_handle: 0x%04X, status: 0x%04X; connection event counter: %d, channel: %d\n",
-			conn->conn_handle, CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel);
+		LOG_ERR("command status: 0x%04X; connection event counter: %d, channel: %d\n",
+			    CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel);
 	}
 	else {
 		conn->skipped_events = 0;

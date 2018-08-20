@@ -53,8 +53,8 @@
 /*---------------------------------------------------------------------------*/
 /* values for a selection of available TX powers (values from SmartRF Studio) */
 /*static uint16_t tx_power = 0x9330;						/ * +5 dBm * / */
-static uint16_t tx_power = 0x3161;                /*  0 dBm */
-/*static uint16_t tx_power = 0x0CCB;                / *  -15 dBm * / */
+//static uint16_t tx_power = 0x3161;                /*  0 dBm */
+static uint16_t tx_power = 0x0CCB;                /*  -15 dBm */
 /*---------------------------------------------------------------------------*/
 /* BLE overrides */
 #if RADIO_CONF_BLE5
@@ -155,7 +155,7 @@ rf_ble_cmd_wait(uint8_t *command)
 }
 /*---------------------------------------------------------------------------*/
 unsigned short
-rf_ble_cmd_setup_ble_mode(void)
+rf_ble_cmd_setup_ble_mode(uint8_t phy, uint8_t coding)
 {
     /*    Bluetooth 5 Setup    */
 #if RADIO_CONF_BLE5
@@ -164,10 +164,17 @@ rf_ble_cmd_setup_ble_mode(void)
 	/* Create radio setup command */
 	rf_core_init_radio_op((rfc_radioOp_t *)&cmd, sizeof(cmd), CMD_BLE5_RADIO_SETUP);
     
+    cmd.startTrigger.bEnaCmd = 0;
+    cmd.config.frontEndMode = 0;
+    cmd.config.biasMode = 0;
+    cmd.config.analogCfgMode = 0;
+    cmd.config.bNoFsPowerUp = 0;
+    cmd.defaultPhy.mainMode = phy;
+    cmd.defaultPhy.coding = coding;
     cmd.pRegOverrideCommon = pOverridesCommon;
-	cmd.pRegOverride1Mbps = pOverrides1Mbps;
-	cmd.pRegOverride2Mbps = pOverrides2Mbps;
-	cmd.pRegOverrideCoded = pOverridesCoded;
+    cmd.pRegOverride1Mbps = pOverrides1Mbps;
+    cmd.pRegOverride2Mbps = pOverrides2Mbps;
+    cmd.pRegOverrideCoded = pOverridesCoded;
 #else
     rfc_CMD_RADIO_SETUP_t cmd;
     
@@ -177,7 +184,6 @@ rf_ble_cmd_setup_ble_mode(void)
     cmd.pRegOverride = ble_overrides;
     cmd.mode = 0;
 #endif
-
 	cmd.txPower = tx_power;
 	
 
@@ -283,7 +289,6 @@ rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_bleInitiatorPar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 1;
     c->startTime = start_time;
     c->pOutput = (rfc_bleInitiatorOutput_t *)output;
 #endif
@@ -340,7 +345,7 @@ rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
 /*---------------------------------------------------------------------------*/
 void
 rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-                            uint8_t *output, uint32_t start_time)
+                            uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding)
 {
     /*    Bluetooth 5 Slave Commands    */
 #if RADIO_CONF_BLE5
@@ -354,11 +359,11 @@ rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_ble5SlavePar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 0;
     c->startTime = start_time;
     c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
 
-    //c->phyMode.mainMode = 1;
+    c->phyMode.mainMode = phy;
+    c->phyMode.coding = coding;
     c->txPower = tx_power;
     c->rangeDelay = 0;
 #else
@@ -372,7 +377,6 @@ rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_bleSlavePar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 0;
     c->startTime = start_time;
     c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
 #endif
@@ -436,7 +440,7 @@ rf_ble_cmd_create_slave_params(uint8_t *params, dataQueue_t *rx_queue,
 /*---------------------------------------------------------------------------*/
 void
 rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-                             uint8_t *output, uint32_t start_time)
+                             uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding)
 {
     /*    Bluetooth 5 Master Commands    */
 #if RADIO_CONF_BLE5
@@ -450,10 +454,11 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_ble5MasterPar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 0;
     c->startTime = start_time;
     c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
 
+    c->phyMode.mainMode = phy;
+    c->phyMode.coding = coding;
 	c->txPower = tx_power;
 	c->rangeDelay = 0;
 #else
@@ -467,7 +472,6 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
     c->channel = channel;
     c->pParams = (rfc_bleMasterPar_t *)params;
     c->startTrigger.triggerType = TRIG_ABSTIME;
-    c->startTrigger.pastTrig = 0;
     c->startTime = start_time;
     c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
 #endif
