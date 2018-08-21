@@ -13,6 +13,8 @@ platform-specific/cc26xx/cc26xx-web-demo/srf06-cc26xx:BOARD=launchpad/cc1310 \
 platform-specific/cc26xx/cc26xx-web-demo/srf06-cc26xx:BOARD=launchpad/cc1350 \
 platform-specific/cc26xx/very-sleepy-demo/srf06-cc26xx \
 platform-specific/cc26xx/ble-ipv6/srf06-cc26xx:BOARD=sensortag/cc2650 \
+platform-specific/cc2640r2/ble-ipv6-client/srf06-cc26xx:BOARD=launchpad/cc2640r2 \
+platform-specific/cc2640r2/ble-ipv6-server/srf06-cc26xx:BOARD=launchpad/cc2640r2 \
 nullnet/srf06-cc26xx:BOARD=sensortag/cc2650 \
 rpl-border-router/srf06-cc26xx:BOARD=launchpad/cc2650 \
 sensniff/srf06-cc26xx \
@@ -24,6 +26,7 @@ dev/gpio-hal/srf06-cc26xx:BOARD=sensortag/cc2650 \
 dev/gpio-hal/srf06-cc26xx:BOARD=launchpad/cc1310 \
 dev/gpio-hal/srf06-cc26xx:BOARD=launchpad/cc1350 \
 dev/gpio-hal/srf06-cc26xx:BOARD=launchpad/cc2650 \
+dev/gpio-hal/srf06-cc26xx:BOARD=launchpad/cc2640r2 \
 dev/leds/srf06-cc26xx:BOARD=srf06/cc13xx \
 dev/leds/srf06-cc26xx:BOARD=srf06/cc26xx \
 dev/leds/srf06-cc26xx:BOARD=sensortag/cc1350 \
@@ -31,6 +34,7 @@ dev/leds/srf06-cc26xx:BOARD=sensortag/cc2650 \
 dev/leds/srf06-cc26xx:BOARD=launchpad/cc1310 \
 dev/leds/srf06-cc26xx:BOARD=launchpad/cc1350 \
 dev/leds/srf06-cc26xx:BOARD=launchpad/cc2650 \
+dev/leds/srf06-cc26xx:BOARD=launchpad/cc2640r2 \
 6tisch/etsi-plugtest-2017/srf06-cc26xx:BOARD=launchpad/cc2650 \
 mqtt-client/srf06-cc26xx:BOARD=srf06/cc26xx \
 mqtt-client/srf06-cc26xx:BOARD=launchpad/cc2650 \
