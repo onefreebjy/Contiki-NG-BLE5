@@ -108,6 +108,28 @@ void rf_ble_cmd_create_adv_params(uint8_t *param, dataQueue_t *rx_queue,
 
 /*---------------------------------------------------------------------------*/
 /**
+ * \brief Creates a BLE radio command structure that sets up
+ *      BLE initiation event when sent to the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_initiator_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
+                                     uint8_t *output, uint32_t start_time);
+
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Creates BLE radio command parameters that are used to set up
+ *      BLE initiation event on the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_initiator_params(uint8_t *param, dataQueue_t *rx_queue,
+                                        uint32_t initiator_window,
+                                        ble_addr_type_t own_addr_type, uint8_t *own_addr,
+                                        ble_addr_type_t peer_addr_type, uint8_t *peer_addr,
+                                        uint32_t connect_time,
+                                        uint8_t *conn_req_data);
+
+/*---------------------------------------------------------------------------*/
+/**
  * \brief Creates a BLE radio command structure that sets up a single
  *      BLE connection event when sent to the radio core
  * \param cmd     A pointer to command that is created
@@ -147,6 +169,26 @@ void rf_ble_cmd_create_slave_params(uint8_t *param, dataQueue_t *rx_queue,
                                     uint8_t crc_init_0, uint8_t crc_init_1,
                                     uint8_t crc_init_2, uint32_t win_size,
                                     uint32_t window_widening, uint8_t first_packet);
+
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Creates a BLE radio command structure that sets up
+ *      BLE connection event when sent to the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
+                                  uint8_t *output, uint32_t start_time);
+
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Creates BLE radio command parameters that are used to set up
+ *      BLE connection event on the radio core
+ *      //  DESCRIPTION TO PARAMS NEEDED    //
+ */
+void rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
+                                     dataQueue_t *tx_queue, uint32_t access_address,
+                                     uint8_t crc_init_0, uint8_t crc_init_1,
+                                     uint8_t crc_init_2, uint8_t first_packet);
 
 /*---------------------------------------------------------------------------*/
 /**
