@@ -1377,7 +1377,7 @@ connection_event_master(struct rtimer *t, void *ptr)
                                   conn->crc_init_0, conn->crc_init_1, conn->crc_init_2, first_packet);
   
   rf_ble_cmd_create_master_cmd(conn->cmd_buf, conn->mapped_channel, conn->param_buf, conn->output_buf,
-                               ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE), BLE5_PHY_MODE, BLE5_PHY_CODING);
+                               ticks_to_unit(conn->start_rt, TIME_UNIT_RF_CORE));
   
   if (on() != BLE_RESULT_OK) {
     LOG_ERR("connection_event: could not enable radio core\n");

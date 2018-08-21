@@ -165,8 +165,8 @@ rf_ble_cmd_setup_ble_mode(void)
   cmd.config.biasMode = 0;
   cmd.config.analogCfgMode = 0;
   cmd.config.bNoFsPowerUp = 0;
-  cmd.defaultPhy.mainMode = phy;
-  cmd.defaultPhy.coding = coding;
+  cmd.defaultPhy.mainMode = 1;
+  cmd.defaultPhy.coding = 1;
   cmd.pRegOverrideCommon = pOverridesCommon;
   cmd.pRegOverride1Mbps = pOverrides1Mbps;
   cmd.pRegOverride2Mbps = pOverrides2Mbps;
@@ -203,6 +203,7 @@ rf_ble_cmd_create_adv_cmd(uint8_t *command, uint8_t channel,
   
   c->commandNo = CMD_BLE5_ADV;
   c->rangeDelay = 0;
+  
   c->txPower = tx_power;
 #else
   rfc_CMD_BLE_ADV_t *c = (rfc_CMD_BLE_ADV_t *)command;
@@ -350,8 +351,8 @@ rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
   
-  c->phyMode.mainMode = phy;
-  c->phyMode.coding = coding;
+  c->phyMode.mainMode = 1;
+  c->phyMode.coding = 1;
   c->txPower = tx_power;
   c->rangeDelay = 0;
 #else
@@ -427,7 +428,7 @@ rf_ble_cmd_create_slave_params(uint8_t *params, dataQueue_t *rx_queue,
 /*---------------------------------------------------------------------------*/
 void
 rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-                             uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding)
+                             uint8_t *output, uint32_t start_time)
 {
 #if RADIO_CONF_BLE5
   rfc_CMD_BLE5_MASTER_t *c = (rfc_CMD_BLE5_MASTER_t *)cmd;
@@ -443,8 +444,8 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
   
-  c->phyMode.mainMode = phy;
-  c->phyMode.coding = coding;
+  c->phyMode.mainMode = 1;
+  c->phyMode.coding = 1;
   c->txPower = tx_power;
   c->rangeDelay = 0;
 #else

@@ -177,7 +177,7 @@ void rf_ble_cmd_create_slave_params(uint8_t *param, dataQueue_t *rx_queue,
  *      //  DESCRIPTION TO PARAMS NEEDED    //
  */
 void rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
-                                  uint8_t *output, uint32_t start_time, uint8_t phy, uint8_t coding);
+                                  uint8_t *output, uint32_t start_time);
 
 /*---------------------------------------------------------------------------*/
 /**
