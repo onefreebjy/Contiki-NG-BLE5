@@ -93,8 +93,8 @@ tcpip_handler(void)
 static void
 timeout_handler(void)
 {
-  sprintf(buf, "%04u Hello server !", packet_counter);
-  //printf("send message: <%s>\n", buf);
+  sprintf(buf, "Hello server %04u!", packet_counter);
+  printf("send message: <%s>\n", buf);
   uip_udp_packet_send(conn, buf, strlen(buf));
   packet_counter++;
 }
