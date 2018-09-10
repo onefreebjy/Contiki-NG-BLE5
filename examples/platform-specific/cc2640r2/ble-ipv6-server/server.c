@@ -71,12 +71,12 @@ tcpip_handler(void)
     /* process received message */
     strncpy(buf, uip_appdata, uip_datalen());
     buf[uip_datalen()] = '\0';
-    printf("rec. message: <%s>\n", buf);
+    //printf("rec. message: <%s>\n", buf);
 
     /* send response message */
     uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
-    sprintf(buf, "Hello client %04u!", packet_counter);
-	printf("send message: <%s>\n", buf);
+    //sprintf(buf, "Hello client %04u!", packet_counter);
+	//printf("send message: <%s>\n", buf);
     uip_udp_packet_send(server_conn, buf, strlen(buf));
     packet_counter++;
 

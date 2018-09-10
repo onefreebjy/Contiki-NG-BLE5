@@ -53,7 +53,7 @@
 #define SERVER_PORT           61616
 
 #define PING_TIMEOUT              (CLOCK_SECOND / 4)
-#define CLIENT_SEND_INTERVAL      (CLOCK_SECOND * 1)
+#define CLIENT_SEND_INTERVAL      (CLOCK_SECOND * 3)
 
 #define UDP_LEN_MAX           255
 /*---------------------------------------------------------------------------*/
@@ -86,15 +86,19 @@ tcpip_handler(void)
   if(uip_newdata()) {
     strncpy(data, uip_appdata, uip_datalen());
     data[uip_datalen()] = '\0';
-    printf("rec. message: <%s>\n", data);
+    //printf("rec. message: <%s>\n", data);
+    if(strcmp(data, buf)==0){
+      printf("%lu ms\n",(1000*(clock_time() - timer.timer.start))/CLOCK_SECOND);
+    }
   }
 }
 /*---------------------------------------------------------------------------*/
 static void
 timeout_handler(void)
 {
-  sprintf(buf, "Hello server %04u!", packet_counter);
-  printf("send message: <%s>\n", buf);
+  sprintf(buf, "%04u Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!Hello server!", packet_counter);
+
+  printf("send message: <%s>, length: %d\n", buf,strlen(buf));
   uip_udp_packet_send(conn, buf, strlen(buf));
   packet_counter++;
 }

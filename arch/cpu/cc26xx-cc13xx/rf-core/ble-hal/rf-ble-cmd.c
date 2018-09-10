@@ -53,8 +53,11 @@
 /*---------------------------------------------------------------------------*/
 /* values for a selection of available TX powers (values from SmartRF Studio) */
 /*static uint16_t tx_power = 0x9330;						/ * +5 dBm * / */
-static uint16_t tx_power = 0x3161;                /*  0 dBm */
-/*static uint16_t tx_power = 0x0CCB;                / *  -15 dBm * / */
+//static uint16_t tx_power = 0x3161;                /*  0 dBm */
+static uint16_t tx_power = 0x0CCB;                /// *  -15 dBm * /
+
+#define PHY_MODE 0
+#define PHY_CODING 1
 /*---------------------------------------------------------------------------*/
 /* BLE overrides */
 #if RADIO_CONF_BLE5
@@ -165,8 +168,8 @@ rf_ble_cmd_setup_ble_mode(void)
   cmd.config.biasMode = 0;
   cmd.config.analogCfgMode = 0;
   cmd.config.bNoFsPowerUp = 0;
-  cmd.defaultPhy.mainMode = 1;
-  cmd.defaultPhy.coding = 1;
+  cmd.defaultPhy.mainMode = PHY_MODE;
+  cmd.defaultPhy.coding = PHY_CODING;
   cmd.pRegOverrideCommon = pOverridesCommon;
   cmd.pRegOverride1Mbps = pOverrides1Mbps;
   cmd.pRegOverride2Mbps = pOverrides2Mbps;
@@ -351,8 +354,8 @@ rf_ble_cmd_create_slave_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
   
-  c->phyMode.mainMode = 1;
-  c->phyMode.coding = 1;
+  c->phyMode.mainMode = PHY_MODE;
+  c->phyMode.coding = PHY_CODING;
   c->txPower = tx_power;
   c->rangeDelay = 0;
 #else
@@ -444,8 +447,8 @@ rf_ble_cmd_create_master_cmd(uint8_t *cmd, uint8_t channel, uint8_t *params,
   c->startTime = start_time;
   c->pOutput = (rfc_bleMasterSlaveOutput_t *)output;
   
-  c->phyMode.mainMode = 1;
-  c->phyMode.coding = 1;
+  c->phyMode.mainMode = PHY_MODE;
+  c->phyMode.coding = PHY_CODING;
   c->txPower = tx_power;
   c->rangeDelay = 0;
 #else
@@ -505,7 +508,7 @@ rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
   p->crcInit0 = crc_init_0;
   p->crcInit1 = crc_init_1;
   p->crcInit2 = crc_init_2;
-  p->endTrigger.triggerType = TRIG_REL_START;
+  p->endTrigger.triggerType = TRIG_NEVER;
   p->endTime = (uint32_t)15 * 4000;   /* a connection event must end after 10 ms */
 }
 

@@ -65,6 +65,8 @@
 #include "rf-core/ble-hal/rf-ble-cmd.h"
 
 #include "rf_patches/rf_patch_cpe_bt5.h"
+
+#include "dev/watchdog.h"
 /*---------------------------------------------------------------------------*/
 #include "sys/log.h"
 #define LOG_MODULE "BLE-RADIO"
@@ -1226,6 +1228,7 @@ connection_rx(ble_conn_param_t *param)
   }
 }
 /*---------------------------------------------------------------------------*/
+static int total_loss = 0;
 static void
 connection_event_slave(struct rtimer *t, void *ptr)
 {
@@ -1242,6 +1245,9 @@ connection_event_slave(struct rtimer *t, void *ptr)
     conn->start_rt = conn->timestamp_rt + ticks_from_unit(conn->win_offset, TIME_UNIT_1_25_MS) - CONN_WINDOW_WIDENING_TICKS;
     update_data_channel(conn);
     first_packet = 1;
+  }
+  else if(conn->counter == 400){
+    printf("total: %d\n",total_loss);
   }
   conn->counter++;
 
@@ -1302,10 +1308,11 @@ connection_event_slave(struct rtimer *t, void *ptr)
     rf_ble_cmd_send(conn->cmd_buf);
     rf_ble_cmd_wait(conn->cmd_buf);
     off();
-
+  
     if(CMD_GET_STATUS(conn->cmd_buf) != RF_CORE_RADIO_OP_STATUS_BLE_DONE_OK) {
-      LOG_DBG("command status: 0x%04X; connection event counter: %d, channel: %d\n",
-              CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel);
+//      LOG_ERR("command status: 0x%04X; connection event counter: %d, channel: %d\n",
+//              CMD_GET_STATUS(conn->cmd_buf), conn->counter, conn->mapped_channel);
+      ++total_loss;
     }
 
     /* free finished TX buffers */
@@ -1341,6 +1348,9 @@ connection_event_master(struct rtimer *t, void *ptr)
     conn->start_rt = conn->timestamp_rt + ticks_from_unit(conn->win_offset, TIME_UNIT_1_25_MS);
     update_data_channel(conn);
     first_packet = 1;
+  }
+  else if(conn->counter == 400){
+    watchdog_reboot();
   }
   conn->counter++;
   
