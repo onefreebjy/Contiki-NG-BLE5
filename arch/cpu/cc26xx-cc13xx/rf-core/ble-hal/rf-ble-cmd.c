@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017, Graz University of Technology
+ * Copyright (c) 2018, University of Bristol - http://www.bristol.ac.uk/
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,7 @@
  *
  * \author
  *    Michael Spoerk <michael.spoerk@tugraz.at>
+ *    Jinyan BAI <onefreebjy@outlook.com>
  */
 /*---------------------------------------------------------------------------*/
 #include "contiki.h"
@@ -58,57 +60,57 @@ static uint16_t tx_power = 0x3161;                /*  0 dBm */
 /*---------------------------------------------------------------------------*/
 /* BLE overrides */
 #if RADIO_CONF_BLE5
-uint32_t pOverridesCommon[] =
+uint32_t ble_overrides_common[] =
 {
-  // Rx: Set LNA IB trim value based on the selected defaultPhy.mainMode setting. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  /* Rx: Set LNA IB trim value based on the selected defaultPhy.mainMode setting. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.) */
   ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
-  // Rx: Set LNA IB offset used for automatic software compensation to 0
+  /* Rx: Set LNA IB offset used for automatic software compensation to 0 */
   (uint32_t)0x00008883,
-  // Synth: Use 24 MHz crystal, enable extra PLL filtering
+  /* Synth: Use 24 MHz crystal, enable extra PLL filtering */
   (uint32_t)0x02010403,
-  // Synth: Set fine top and bottom code to 127 and 0
+  /* Synth: Set fine top and bottom code to 127 and 0 */
   HW_REG_OVERRIDE(0x4020, 0x7F00),
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   HW32_ARRAY_OVERRIDE(0x4004, 1),
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   (uint32_t)0x1C0C0618,
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   (uint32_t)0xC00401A1,
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   (uint32_t)0x21010101,
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   (uint32_t)0xC0040141,
-  // Synth: Configure faster calibration
+  /* Synth: Configure faster calibration */
   (uint32_t)0x00214AD3,
-  // Synth: Decrease synth programming time-out by 90 us (0x0298 RAT ticks = 166 us)
+  /* Synth: Decrease synth programming time-out by 90 us (0x0298 RAT ticks = 166 us) */
   (uint32_t)0x02980243,
-  // Bluetooth 5: Set correct total clock accuracy for received AuxPtr assuming local sleep clock of 50 ppm
+  /* Bluetooth 5: Set correct total clock accuracy for received AuxPtr assuming local sleep clock of 50 ppm */
   (uint32_t)0x0E490823,
-  // override_frontend_id.xml
+  /* override_frontend_id.xml */
   (uint32_t)0xFFFFFFFF,
 };
 
-uint32_t pOverrides1Mbps[] =
+uint32_t ble_overrides_1Mbps[] =
 {
-  // Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  /* Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.) */
   ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
-  // Rx: Configure AGC to use gain table for improved performance
+  /* Rx: Configure AGC to use gain table for improved performance */
   HW_REG_OVERRIDE(0x6084, 0x05F8),
   (uint32_t)0xFFFFFFFF,
 };
 
-uint32_t pOverrides2Mbps[] =
+uint32_t ble_overrides_2Mbps[] =
 {
-  // Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.)
+  /* Rx: Set LNA IB trim to normal trim value. (NOTE: The value 0x8 is a placeholder. The value to use should be set during run-time by radio driver function.) */
   ADI_HALFREG_OVERRIDE(0,4,0xF,0x8),
   (uint32_t)0xFFFFFFFF,
 };
 
-uint32_t pOverridesCoded[] =
+uint32_t ble_overrides_coded[] =
 {
-  // Rx: Set LNA IB trim to 0xF (maximum)
+  /* Rx: Set LNA IB trim to 0xF (maximum) */
   ADI_HALFREG_OVERRIDE(0,4,0xF,0xF),
-  // Rx: Override AGC target gain to improve performance
+  /* Rx: Override AGC target gain to improve performance */
   HW_REG_OVERRIDE(0x6088, 0x0018),
   (uint32_t)0xFFFFFFFF,
 };
@@ -161,16 +163,12 @@ rf_ble_cmd_setup_ble_mode(void)
   rf_core_init_radio_op((rfc_radioOp_t *)&cmd, sizeof(cmd), CMD_BLE5_RADIO_SETUP);
   
   cmd.startTrigger.bEnaCmd = 0;
-  cmd.config.frontEndMode = 0;
-  cmd.config.biasMode = 0;
-  cmd.config.analogCfgMode = 0;
-  cmd.config.bNoFsPowerUp = 0;
   cmd.defaultPhy.mainMode = 1;
   cmd.defaultPhy.coding = 1;
-  cmd.pRegOverrideCommon = pOverridesCommon;
-  cmd.pRegOverride1Mbps = pOverrides1Mbps;
-  cmd.pRegOverride2Mbps = pOverrides2Mbps;
-  cmd.pRegOverrideCoded = pOverridesCoded;
+  cmd.pRegOverrideCommon = ble_overrides_common;
+  cmd.pRegOverride1Mbps = ble_overrides_1Mbps;
+  cmd.pRegOverride2Mbps = ble_overrides_2Mbps;
+  cmd.pRegOverrideCoded = ble_overrides_coded;
 #else
   rfc_CMD_RADIO_SETUP_t cmd;
 
@@ -488,7 +486,7 @@ rf_ble_cmd_create_master_params(uint8_t *params, dataQueue_t *rx_queue,
   p->rxConfig.bAppendStatus = 1;
   p->rxConfig.bAppendTimestamp = 1;
   
-  if (first_packet) {
+  if(first_packet) {
     /* set parameters for first packet according to TI Technical Reference Manual */
     p->seqStat.lastRxSn = 1;
     p->seqStat.lastTxSn = 1;
